@@ -2,7 +2,12 @@ package com.ptit.jobportalsystem.security.filter;
 
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.ptit.jobportalsystem.auth.service.TokenService;
+import com.ptit.jobportalsystem.exception.AppException;
+import com.ptit.jobportalsystem.exception.UserErrorCode;
 import com.ptit.jobportalsystem.security.jwt.JwtTokenProvider;
+import com.ptit.jobportalsystem.security.principal.UserPrincipal;
+import com.ptit.jobportalsystem.user.entity.User;
+import com.ptit.jobportalsystem.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,13 +21,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenService tokenService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -41,13 +46,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 JWTClaimsSet claims = jwtTokenProvider.validateAndExtractClaims(token);
 
-                String userId = claims.getStringClaim("userId");
+                Long userId = Long.valueOf(claims.getClaim("userId").toString());
                 String role = claims.getStringClaim("role");
 
+                User user = userRepository.findByIdWithRole(Long.valueOf(userId))
+                        .orElseThrow(() -> new  AppException(UserErrorCode.USER_NOT_FOUND));
+
+                UserPrincipal principal = UserPrincipal.create(user);
+
                 var auth = new UsernamePasswordAuthenticationToken(
-                        claims.getSubject(),
+                        principal,
                         null,
-                        List.of(new SimpleGrantedAuthority(role))
+                        principal.getAuthorities()
                 );
 
                 SecurityContextHolder.getContext().setAuthentication(auth);

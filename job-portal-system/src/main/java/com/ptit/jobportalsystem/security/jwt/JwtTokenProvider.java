@@ -40,7 +40,9 @@ public class JwtTokenProvider {
                     .issueTime(Date.from(now))
                     .expirationTime(Date.from(expiry))
                     // Custom claims — nhúng context vào token để filter đọc
-                    .claim("userId", claims.userId())
+//                    .claim("userId", claims.userId())
+//                    .claim("role", claims.role())
+                    .claim("userId", String.valueOf(claims.userId()))
                     .claim("role", claims.role())
                     .build();
 
@@ -57,6 +59,10 @@ public class JwtTokenProvider {
 
     public JWTClaimsSet validateAndExtractClaims(String token) {
         try {
+            if (token == null || token.isBlank()) {
+                throw new AppException(SecurityErrorCode.ACCESS_TOKEN_INVALID);
+            }
+
             SignedJWT signedJWT = SignedJWT.parse(token);
             JWSVerifier verifier = new MACVerifier(secretKey);
 

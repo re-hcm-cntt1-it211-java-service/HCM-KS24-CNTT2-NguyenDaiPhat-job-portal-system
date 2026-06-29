@@ -1,7 +1,11 @@
 package com.ptit.jobportalsystem.config;
 
+import com.ptit.jobportalsystem.auth.service.TokenService;
+import com.ptit.jobportalsystem.security.filter.JwtAuthenticationFilter;
 import com.ptit.jobportalsystem.security.handler.JwtAccessDeniedHandler;
 import com.ptit.jobportalsystem.security.handler.JwtAuthenticationEntryPoint;
+import com.ptit.jobportalsystem.security.jwt.JwtTokenProvider;
+import com.ptit.jobportalsystem.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -23,8 +28,11 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final UserDetailsService userDetailsService;
+    private final JwtTokenProvider jwtTokenProvider;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final TokenService tokenService;
+    private final UserRepository userRepository;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -44,15 +52,25 @@ public class SecurityConfig {
     }
 
     @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtTokenProvider, tokenService, userRepository);
+    }
+
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/users/**").hasAnyRole("CANDIDATE", "EMPLOYER", "ADMIN")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/employer/**").hasRole("EMPLOYER")
                                 .anyRequest().authenticated()
                 )
                 .authenticationProvider(daoAuthenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));

@@ -15,15 +15,21 @@ public class UserPrincipal implements UserDetails {
     private final Long id;
     private final String email;
     private final String password;
+    private final String role;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(User user) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPassword();
+        this.role = user.getRole().getName();
         this.authorities = List.of(
                 new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
         );
+    }
+
+    public static UserPrincipal create(User user) {
+        return new UserPrincipal(user);
     }
 
     @Override
