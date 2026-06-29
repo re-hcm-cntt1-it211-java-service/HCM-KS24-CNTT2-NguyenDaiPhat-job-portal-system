@@ -16,6 +16,7 @@ public class UserPrincipal implements UserDetails {
     private final String email;
     private final String password;
     private final String role;
+    private final Boolean isActive;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(User user) {
@@ -23,6 +24,7 @@ public class UserPrincipal implements UserDetails {
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.role = user.getRole().getName();
+        this.isActive = user.getIsActive();
         this.authorities = List.of(
                 new SimpleGrantedAuthority("ROLE_" + user.getRole().getName())
         );
@@ -54,6 +56,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return Boolean.TRUE.equals(isActive);
     }
 }

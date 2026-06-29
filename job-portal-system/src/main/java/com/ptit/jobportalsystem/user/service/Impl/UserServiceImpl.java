@@ -80,9 +80,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->
-                        new AppException(UserErrorCode.USER_NOT_FOUND));
+//        User user = userRepository.findByEmail(request.getEmail())
+//                .orElseThrow(() ->
+//                        new AppException(UserErrorCode.USER_NOT_FOUND));
 
         // TODO
         // tạo ResetPasswordToken

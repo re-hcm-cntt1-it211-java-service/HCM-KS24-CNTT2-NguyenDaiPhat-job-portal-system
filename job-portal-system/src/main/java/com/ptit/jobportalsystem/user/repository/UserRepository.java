@@ -1,6 +1,8 @@
 package com.ptit.jobportalsystem.user.repository;
 
 import com.ptit.jobportalsystem.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -12,4 +14,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u JOIN FETCH u.role WHERE u.id = :id")
     Optional<User> findByIdWithRole(Long id);
+
+    Page<User> findAllByIsDeletedFalse(Pageable pageable);
+
+    Optional<User> findByIdAndIsDeletedFalse(Long id);
+
+    Optional<User> findByEmailAndIsDeletedFalse(String email);
 }
