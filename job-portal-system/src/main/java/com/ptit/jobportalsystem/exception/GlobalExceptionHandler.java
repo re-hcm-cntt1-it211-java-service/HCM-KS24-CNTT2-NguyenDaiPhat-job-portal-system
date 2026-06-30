@@ -3,6 +3,7 @@ package com.ptit.jobportalsystem.exception;
 import com.ptit.jobportalsystem.common.response.ApiResponse;
 import com.ptit.jobportalsystem.user.entity.Role;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -106,6 +107,27 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+
+        if (ex.getMessage() != null &&
+                ex.getMessage().contains("JobStatus")) {
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.<Void>builder()
+                            .code(JobErrorCode.INVALID_JOB_STATUS.getCode())
+                            .message(JobErrorCode.INVALID_JOB_STATUS.getMessage())
+                            .build());
+        }
+
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.<Void>builder()
+                        .code(400)
+                        .message("Invalid request body")
+                        .build());
+    }
+
 
     //     fix tạm
 //     ngoài lề: để converter sang loại lỗi cụ thể
@@ -124,6 +146,11 @@ public class GlobalExceptionHandler {
             for (RoleErrorCode e : RoleErrorCode.values()) {
                 if (e.name().equals(code)) return e;
             }
+
+            for (JobErrorCode e : JobErrorCode.values()) {
+                if (e.name().equals(code)) return e;
+            }
+
 
             return null;
         }
