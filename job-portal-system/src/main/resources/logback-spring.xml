@@ -1,0 +1,136 @@
+<configuration>
+
+    <!--
+        APPENDER "JSON" — in ra stdout (console)
+        Dùng cho: môi trường container/Docker/K8s
+        Lý do: container không nên ghi file, log được thu thập bởi
+        container runtime (Fluentd, Filebeat, Promtail) từ stdout
+    -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+
+        <!--
+            LogstashEncoder: format log thành JSON một dòng
+            Thay vì: 2024-01-01 INFO  MyClass - message
+            Thành:   {"@timestamp":"...","level":"INFO","traceId":"abc","message":"..."}
+            → dễ parse, dễ query trên ELK/Grafana
+        -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+
+            <!--
+                includeMdc=true: đưa toàn bộ MDC vào JSON output
+                MDC (Mapped Diagnostic Context) là nơi bạn nhét:
+                  - traceId (từ Spring Sleuth / Micrometer Tracing)
+                  - spanId
+                  - userId, requestId (nếu bạn tự set thủ công)
+                Kết quả: {"traceId":"abc123","userId":"u-99","message":"..."}
+            -->
+            <includeMdc>true</includeMdc>
+
+        </encoder>
+
+    </appender>
+
+    <!--
+        APPENDER "FILE" — ghi ra file vật lý
+        Dùng cho: môi trường bare-metal / VM (không phải container)
+        Hoặc: cần giữ log local làm backup trước khi ship lên central log
+        KHÔNG dùng cái này trong K8s pod — vô nghĩa vì pod ephemeral
+    -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <!-- File đang được ghi hiện tại -->
+        <file>logs/app.log</file>
+
+        <!--
+            SizeAndTimeBasedRollingPolicy: rolling theo cả thời gian VÀ kích thước
+            Tốt hơn TimeBasedRollingPolicy thuần túy vì tránh 1 file quá to
+        -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+
+            <!--
+                Pattern tên file khi rotate:
+                  %d{yyyy-MM-dd} → theo ngày
+                  %i             → index trong ngày (0, 1, 2...) khi vượt maxFileSize
+                Ví dụ: app.2024-01-15.0.log, app.2024-01-15.1.log
+            -->
+            <fileNamePattern>logs/app.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+
+            <!-- Mỗi file tối đa 10MB, hết thì tạo file mới với %i tăng lên -->
+            <maxFileSize>10MB</maxFileSize>
+
+            <!--
+                Giữ tối đa 30 ngày log
+                File cũ hơn 30 ngày bị xóa tự động
+                Thực tế: chỉnh theo compliance requirement của công ty (30/90/365 ngày)
+            -->
+            <maxHistory>30</maxHistory>
+
+            <!--
+                QUAN TRỌNG: nên thêm cái này trong thực tế
+                Giới hạn tổng dung lượng toàn bộ log (không chỉ per-file)
+                Tránh trường hợp đĩa đầy khi log nhiều
+            -->
+            <totalSizeCap>3GB</totalSizeCap>
+
+        </rollingPolicy>
+
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdc>true</includeMdc>
+        </encoder>
+
+    </appender>
+
+
+    <!-- ============================================================
+         ASYNC WRAPPER — cực kỳ quan trọng trong production
+         Không có async: mỗi lần log là block thread, ảnh hưởng latency
+         Có async: log được đẩy vào queue, thread chính không bị chặn
+         ============================================================ -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+
+        <!--
+            Queue size: bao nhiêu log entries được buffer
+            Mặc định 256 — quá nhỏ cho production traffic cao
+        -->
+        <queueSize>2048</queueSize>
+
+        <!--
+            Khi queue đầy 80%, Logback mặc định DROP TRACE/DEBUG/INFO
+            discardingThreshold=0: tắt hành vi này, không drop log nào
+            Cân nhắc: nếu throughput cực cao thì để mặc định để tránh OOM
+        -->
+        <discardingThreshold>0</discardingThreshold>
+
+        <!-- Bọc FILE appender bên trong async -->
+        <appender-ref ref="FILE"/>
+
+    </appender>
+
+
+    <!--
+        Tắt log noise từ các framework — thực tế luôn cần
+        Hibernate, Spring, Apache HTTP client rất verbose ở DEBUG
+    -->
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.springframework.web" level="WARN"/>
+    <logger name="org.apache.http" level="WARN"/>
+
+    <!--
+        Package của bạn: để DEBUG khi dev, INFO khi production
+        Thực tế dùng Spring profiles hoặc env variable để switch
+    -->
+    <logger name="com.yourcompany" level="INFO"/>
+
+
+    <!--
+        Root logger: catch-all cho mọi thứ không được khai báo ở trên
+        Level INFO: bỏ qua DEBUG/TRACE từ toàn bộ dependency
+    -->
+    <root level="INFO">
+        <!-- stdout cho container/K8s -->
+        <appender-ref ref="JSON"/>
+        <!-- file với async wrapper cho VM/bare-metal -->
+        <appender-ref ref="ASYNC_FILE"/>
+    </root>
+
+</configuration>

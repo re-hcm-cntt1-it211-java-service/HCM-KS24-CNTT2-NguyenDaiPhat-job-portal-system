@@ -55,6 +55,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Cloudinary SDK
+    implementation 'com.cloudinary:cloudinary-http44:1.39.0'
+
+    // Apache Commons (check file type nếu cần)
+    implementation 'commons-io:commons-io:2.15.1'
 }
 
 tasks.named('test') {
