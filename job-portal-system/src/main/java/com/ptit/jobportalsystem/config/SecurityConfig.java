@@ -1,6 +1,8 @@
 package com.ptit.jobportalsystem.config;
 
 import com.ptit.jobportalsystem.auth.service.TokenService;
+import com.ptit.jobportalsystem.filter.MdcRequestContextFilter;
+import com.ptit.jobportalsystem.filter.RequestLoggingFilter;
 import com.ptit.jobportalsystem.security.filter.JwtAuthenticationFilter;
 import com.ptit.jobportalsystem.security.handler.JwtAccessDeniedHandler;
 import com.ptit.jobportalsystem.security.handler.JwtAuthenticationEntryPoint;
@@ -33,6 +35,8 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final TokenService tokenService;
     private final UserRepository userRepository;
+    private final MdcRequestContextFilter mdcRequestContextFilter;
+    private final RequestLoggingFilter requestLoggingFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -70,7 +74,11 @@ public class SecurityConfig {
                                 .anyRequest().authenticated()
                 )
                 .authenticationProvider(daoAuthenticationProvider())
+
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(mdcRequestContextFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(requestLoggingFilter, MdcRequestContextFilter.class)
+
                 .exceptionHandling(ex -> ex
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint));

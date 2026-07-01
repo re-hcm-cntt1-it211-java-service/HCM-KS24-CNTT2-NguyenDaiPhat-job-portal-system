@@ -11,7 +11,11 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PerformanceAspect {
 
-    @Around("within(@org.springframework.stereotype.Service *)")
+    @Around("""
+    execution(* ..service..*(..))
+    && !execution(* ..CurrentUserService.*(..))
+    && !execution(* ..TokenBlacklistService.isBlacklisted(..))
+    """)
     public Object measureExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
         long start = System.currentTimeMillis();
 

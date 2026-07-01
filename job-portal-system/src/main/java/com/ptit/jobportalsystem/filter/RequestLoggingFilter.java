@@ -27,9 +27,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } finally {
-            long ducation = System.currentTimeMillis() - start;
+//            log.info("HTTP_RESPONSE status{} ducation{}ms", response.getStatus(), ducation);
+            long duration = System.currentTimeMillis() - start;
 
-            log.info("HTTP_RESPONSE status{} ducation{}ms", response.getStatus(), ducation);
+            log.info(
+                    "HTTP_RESPONSE status={} duration={}ms",
+                    response.getStatus(),
+                    duration
+            );
         }
 
     }

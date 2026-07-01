@@ -30,7 +30,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse getProfile() {
 
         Long userId = currentUserService.getUserId();
-        System.out.println("Phát ktra id " + currentUserService.getUserId());
+//        System.out.println("Phát ktra id " + currentUserService.getUserId());
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(UserErrorCode.USER_NOT_FOUND));

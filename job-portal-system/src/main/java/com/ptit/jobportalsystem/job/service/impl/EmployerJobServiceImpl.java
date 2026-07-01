@@ -72,7 +72,7 @@ public class EmployerJobServiceImpl implements EmployerJobService {
             job.setStatus(JobStatus.PENDING);
         }
 
-        job.setStatus(JobStatus.PENDING);
+//        job.setStatus(JobStatus.PENDING);
 
         return jobMapper.toResponse(jobRepository.save(job));
     }
